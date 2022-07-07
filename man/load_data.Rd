@@ -2,7 +2,7 @@
 % Please edit documentation in R/load_data.R
 \name{load_data}
 \alias{load_data}
-\title{Automatically load climate models (netCDF/NcML) in a tidy format}
+\title{Automatically load climate models (netCDF/NcML) in a tidy format.}
 \usage{
 load_data(
   path.to.rcps,
@@ -18,7 +18,7 @@ load_data(
 }
 \arguments{
 \item{path.to.rcps}{Absolute path to the directory containing the RCPs/SSPs folders and historical simulations. For example,
-home/user/data/. data would contain subfolders containing the climate models. Historical simulations have to be present and contained in a folder called historical}
+home/user/data/. data would contain subfolders with the climate models. Historical simulations have to be contained in a folder called historical}
 
 \item{country}{A character string, in english, indicating the country of interest. To select a bounding box,
 set country to NULL and define arguments xlim and ylim}
@@ -41,10 +41,9 @@ set country to NULL and define arguments xlim and ylim}
 Tibble with list column
 }
 \description{
-Automatically load climate models (netCDF/NcML) in a tidy format
+Automatically load climate models (netCDF/NcML) in a tidy format.
 }
 \examples{
-path to sample data
 fpath <- system.file("extdata/", package="CHAT")
 exmp <- load_data(country = "Moldova", variable="hurs", n.cores=6,
               path.to.rcps = fpath)

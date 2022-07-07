@@ -5,8 +5,8 @@
 #' @importFrom loadeR loadGridData
 #' @import furrr
 #' @import dplyr
-#' @importFrom sp proj4string
-#' @importFrom raster raster getData
+#' @importFrom sp CRS
+#' @importFrom raster getData crs
 #'
 #' @param path.to.rcps Absolute path to the directory containing the RCPs/SSPs folders and historical simulations. For example,
 #' home/user/data/. data would contain subfolders with the climate models. Historical simulations have to be contained in a folder called historical
@@ -24,8 +24,6 @@
 #'fpath <- system.file("extdata/", package="CHAT")
 #' exmp <- load_data(country = "Moldova", variable="hurs", n.cores=6,
 #'               path.to.rcps = fpath)
-
-
 
 
 load_data <- function(
@@ -50,7 +48,7 @@ if (!is.null(country) & !is.null(xlim)) {
     getData("GADM", country = country, level = 1)
   else
     as(extent(min(xlim), max(xlim), min(ylim), max(ylim)), "SpatialPolygons")
-  proj4string(country_shp) = "+proj=longlat +datum=WGS84 +no_defs"
+  raster::crs(country_shp) = sp::CRS("+init=epsg:4326")
   xlim <-
     c(round(country_shp@bbox[1, 1] - buffer),
       round(country_shp@bbox[1, 2] + buffer))  # longitude boundaries for the region of seasonerest
