@@ -1,0 +1,8 @@
+
+fpath <- system.file("extdata/", package="CHAT")
+
+
+try <- load_data(country = "Moldova", variable="hurs", n.cores=6,
+                 path.to.rcps = fpath)
+
+list.files("extdata")

@@ -1,0 +1,7 @@
+
+try <- load_data(country = "Moldova", variable="hurs", n.cores=6,
+                 path.to.rcps = "/home/riccardo/Dropbox/RIKI/FAO/Tools/CHAT_package/RCP/")
+
+
+raster::proj4string()
+library(raster)
