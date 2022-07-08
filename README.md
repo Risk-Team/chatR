@@ -1,5 +1,5 @@
 # chatR
-chatR is the package version of CHAT. It allows easy loading of cllimate models and the output of the load_data function is used as input for the remaining functions of the charR package
+chatR is the package version of CHAT. It allows easy loading of cllimate models and the output of the load_data function is used as input for the remaining functions of the chatR package
 
 ## Installation
 
