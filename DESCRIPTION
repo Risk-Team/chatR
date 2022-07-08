@@ -1,4 +1,4 @@
-Package: CHAT
+Package: chatR
 Type: Package
 Title: Easy loading and visualization of climate models
 Version: 0.1.0

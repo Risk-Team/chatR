@@ -5,5 +5,5 @@
 #'
 #' @author Riccardo Soldan \email{riccardosoldan@hotmail.it}
 #'
-#' @name CHAT
+#' @name chatR
 NULL
