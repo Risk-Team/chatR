@@ -3,6 +3,7 @@
 
 ## Installation
 
-` library(devtools) \n
-install_github("Risk-Team/CHAT")`
-
+``` 
+library(devtools)
+install_github("Risk-Team/CHAT")
+```
