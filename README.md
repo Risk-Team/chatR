@@ -3,6 +3,6 @@
 
 ## Installation
 
-` library(devtools)
+` library(devtools) \n
 install_github("Risk-Team/CHAT")`
 
