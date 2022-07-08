@@ -5,6 +5,7 @@
 #' @importFrom transformeR bindGrid subsetDimension
 #' @import dplyr
 #' @param data list containing C4R objects, which are the outputs of the loadGridata function
+
 common_dates <- function(data) {
   # list of models
   dates.all = c()
@@ -29,10 +30,6 @@ common_dates <- function(data) {
   return(bindGrid(data, dimension = "member"))
 
 }
-
-#' Climate change signal agreement
-#'
-#' function to find models members sign agreement. Input is a 3d array with first dimension being members
 
 
 sign.prop <- function(array3d) {
@@ -70,9 +67,6 @@ sign.prop <- function(array3d) {
 
 }
 
-#' Date selection
-#'
-#' automatically select common dates among C4R objects
 
 find.agreement = function(x, threshold) {
   #calculate proportion of models predicting each sign of change (negative(-1), no change(0), positive(+1))
@@ -90,7 +84,160 @@ find.agreement = function(x, threshold) {
   }
 }
 
+#' Model agreement
+#'
+#' function to find models members sign agreement.
+#'
+#' @param array3d 3d array in which first dimension is model member, usually C4R$Data. This can be obtained as a result of
+#' bindGrid(data, dimension = "member"). Temporal dimension needs to be removed through another function
+#' @param threshold numeric (0.5-1). Percentage of model agreement required
+#' @return array with 0 (no model agreement) or 1 (model agreement), based on threshold
+
+
 agreement = function(array3d, threshold) {
   array1_agreement = apply(array3d, c(2, 3), find.agreement, threshold)
 }
 
+make_raster <- function(cl4.object) {
+  if (length(dim(cl4.object$Data)) != 2)
+    stop("Your data needs to be a 2d array, check dimension")
+
+  rasters <- raster(
+    cl4.object$Data,
+    xmn = min(cl4.object$xyCoords$x),
+    xmx = max(cl4.object$xyCoords$x),
+    ymn = min(cl4.object$xyCoords$y),
+    ymx = max(cl4.object$xyCoords$y)
+  ) %>%
+    flip(., direction = 'y')
+
+  nms <-
+    paste0(
+      str_extract(cl4.object$Dates$start[1], "\\d{4}"),
+      "_",
+      str_extract(cl4.object$Dates$end[length(cl4.object$Dates$start)],  "\\d{4}")
+    )
+  names(rasters) <-  nms
+
+  raster::crs(rasters) <- sp::CRS("+init=epsg:4326")
+
+  return(rasters)
+
+}
+
+#' Consecutive days
+#'
+#' Calculation of consecutive days. It can be used with aggregateGrid.
+#'
+#' @param col numeric vector
+#' @param duration either "max" or "total".
+#' @param lowert numeric. lower threshold
+#' @param uppert numeric. upper threshold
+#' @return numeric of length 1
+
+# functions for consecutive days
+thrs_consec = function(col, duration, lowert, uppert, ...) {
+
+  if (!is.numeric(col))
+
+    stop("input has to be a numeric vector")
+
+  duration = match.arg(duration, choices = c("max", "total"))
+  #analyse consecutive days
+
+  if(!is.null(lowert)){
+
+    consec = rle(col < lowert)
+
+  } else{
+
+    consec = rle(col > uppert)
+
+  }
+
+  #get only copnsecutive days matching the threshold
+
+  consec_days = consec$lengths[consec$values==TRUE]
+
+  #return values out
+
+  if(duration == "max"){
+
+    return(max(consec_days))
+
+  } else{
+
+    return(sum(consec_days[consec_days >= 6]))
+
+  }
+
+}
+
+
+#' Calculation of thresholds
+#'
+#' Calculation of number of days with certain condition. It can be used with aggregateGrid.
+#'
+#' @param col numeric vector
+#' @param lowert numeric. lower threshold
+#' @param uppert numeric. upper threshold
+#' @return numeric of length 1
+
+
+thrs = function(col, lowert, uppert, ...) {
+
+  if (!is.numeric(col))
+
+    stop("input has to be a numeric vector")
+
+  if(!is.null(lowert)){
+
+    sum(precip_col < lowert)
+
+  } else{
+
+    sum(precip_col > uppert)
+
+  }
+
+}
+
+
+
+# time of emergence. Yes when mean/SD > or < 1 for at least 5 consecutive years
+ToE <- function(x, array)  {
+  array_names <- dimnames(array)[3]
+  if(is.null(array_names)) stop("Your array does not have named 3rd dimension. Check your input")
+  array_names <- as.numeric(unlist(array_names))
+
+  if (length(x)<5) stop("your data contains 6 time series only")
+
+  tmp <- vector(mode="numeric", length=(length(x)-5))
+
+  for (i in 1:(length(x)-5)) {
+
+
+    if (x[i]>=1 & x[i+1]>=1  & x[i+2]>=1 & x[i+3]>=1 & x[i+4]>=1 & x[i+5]>=1) {
+
+      tmp[i] <- array_names[i]
+
+    } else if (x[i]<=-1 & x[i+1]<=-1  & x[i+2]<=-1  & x[i+3]<=-1  & x[i+4]<=-1  & x[i+5]<=-1 ) {
+
+      tmp[i] <- -array_names[i]
+
+    }  else
+      tmp[i]  <- NA
+
+  }
+
+  if (any(is.numeric(tmp)))  {
+
+    tmp <- tmp[!is.na(tmp)] [1]
+
+  } else {
+
+    tmp <- tmp[is.na(tmp)][1] }
+
+  return(tmp)
+
+}
