@@ -2,7 +2,7 @@
 % Please edit documentation in R/load_data.R
 \name{load_data}
 \alias{load_data}
-\title{Automatically load climate models (netCDF/NcML) in a tidy format.}
+\title{Climate models upload}
 \usage{
 load_data(
   path.to.rcps,
@@ -44,7 +44,7 @@ Tibble with list column
 Automatically load climate models (netCDF/NcML) in a tidy format.
 }
 \examples{
-fpath <- system.file("extdata/", package="CHAT")
+fpath <- system.file("extdata/", package="chatR")
 exmp <- load_data(country = "Moldova", variable="hurs", n.cores=6,
               path.to.rcps = fpath)
 }

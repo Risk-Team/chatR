@@ -17,4 +17,5 @@ Imports:
     purrr, 
     raster, 
     sp, 
-    stringr
+    stringr,
+    transformeR

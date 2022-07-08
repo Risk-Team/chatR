@@ -1,12 +1,14 @@
+#' Climate models upload
+#'
 #' Automatically load climate models (netCDF/NcML) in a tidy format.
 #' @export
 #' @import stringr
 #' @import purrr
-#' @importFrom loadeR loadGridData
 #' @import furrr
 #' @import dplyr
-#' @importFrom sp CRS
-#' @importFrom raster getData crs
+#' @import loadeR
+#' @importFrom rJava is.jnull
+
 #'
 #' @param path.to.rcps Absolute path to the directory containing the RCPs/SSPs folders and historical simulations. For example,
 #' home/user/data/. data would contain subfolders with the climate models. Historical simulations have to be contained in a folder called historical
@@ -21,7 +23,7 @@
 #' @param buffer Integer, default to zero. Buffer to add when selecting a country or a bounding box
 #' @return Tibble with list column
 #' @examples
-#'fpath <- system.file("extdata/", package="CHAT")
+#'fpath <- system.file("extdata/", package="chatR")
 #' exmp <- load_data(country = "Moldova", variable="hurs", n.cores=6,
 #'               path.to.rcps = fpath)
 
@@ -37,15 +39,37 @@ load_data <- function(
                       n.cores,
                       buffer=0) {
 
-options(warn=-1)
-
+# stop and warnings
 if(str_detect(path.to.rcps, "^\\.")) stop("please use absolute paths")
+
+
+  if(!is.null(path.to.obs)) {
+
+    obs.file <- list.files(path.to.obs, full.names = TRUE)
+    if (length(obs.file) > 1) stop("Please check your directory. More than 1 file are present")
+
+    dataInventory(obs.file)
+
+  } else {warning("if you do not specify a reanalysis/observational gridded dataset, bias-correction cannot be performed \n")}
+
+  if (!any(str_detect(list.files(path.to.rcps), "stor"))) {
+
+    stop("Please add the historical simulations rounds of your model. The folder name needs to contain the letters stor")
+  }
+
+
+  if(n.cores < length(list.files(path.to.rcps))) stop("Set n.cores > length(list.files(path.to.rcps))")
+
+# messages
+  if (length(list.files(path.to.rcps)) >= 2) message("Your directory contains the following folders: \n", paste(list.files(path.to.rcps), "\n"), "all files within the listed folders will be uploaded \n")
+
+ options(warn=-1)
 
 if (!is.null(country) & !is.null(xlim)) {
   stop("Either select a country or a region of interest, not both")
 } else {
   country_shp = if (!is.null(country))
-    getData("GADM", country = country, level = 1)
+    raster::getData("GADM", country = country, level = 1)
   else
     as(extent(min(xlim), max(xlim), min(ylim), max(ylim)), "SpatialPolygons")
   raster::crs(country_shp) = sp::CRS("+init=epsg:4326")
@@ -63,24 +87,9 @@ range.y <-  max(ylim) - min(ylim)
 
 options(warn=1)
 
+options(warn=1)
+
 if(range.x > 10 | range.y > 10) warning("Please make sure your bounding box is not too big. You might run out of memory")
-
-if(!is.null(path.to.obs)) {
-
-  obs.file <- list.files(path.to.obs, full.names = TRUE)
-  if (length(obs.file) > 1) stop("Please check your directory. More than 1 file are present")
-
-  dataInventory(obs.file)
-
-
-} else {warning("if you do not specify a reanalysis/observational gridded dataset, bias-correction cannot be performed \n")}
-
-if (!any(str_detect(list.files(path.to.rcps), "stor"))) {
-
-  stop("Please add the historical simulations rounds of your model. The folder name needs to contain the letters stor")
-}
-
-if (length(list.files(path.to.rcps)) >= 3) message("Your directory contains the following folders: \n", paste(list.files(path.to.rcps), "\n"), "all files within the listed folders will be uploaded \n")
 
 # building the dataset
 
@@ -98,11 +107,13 @@ future::plan(
   )
 )
 
-message(paste(Sys.time(), "Data loading \n"))
 
 message("Considered time frame for historical simulation is 1976:2005.
 Default time frame for projections is 2010:2099.
 Ensure this matches your data \n")
+
+message(paste(Sys.time(), "Data loading \n"))
+
 
 df1 <-
   tibble(
