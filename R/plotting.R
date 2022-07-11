@@ -1,3 +1,31 @@
+#' Climate projections visualization
+#'
+#' Automatically plot climate models projections and useful statistics
+#' @export
+#' @import stringr
+#' @import ggplot2
+#' @import purrr
+#' @import furrr
+#' @import dplyr
+#' @import transformeR
+#
+#' @param path.to.rcps Absolute path to the directory containing the RCPs/SSPs folders and historical simulations. For example,
+#' home/user/data/. data would contain subfolders with the climate models. Historical simulations have to be contained in a folder called historical
+#' @param country A character string, in english, indicating the country of interest. To select a bounding box,
+#' set country to NULL and define arguments xlim and ylim
+#' @param variable  A character string indicating the variable to be loaded
+#' @param xlim Vector of length = 2, with minimum and maximum longitude coordinates, in decimal degrees, of the bounding box selected.
+#' @param ylim Same as xlim, but for the selection of the latitudinal range.
+#' @param path.to.obs Default to NULL, if not, indicate the absolute path to the directory containing a reanalysis dataset, for example W5E5 or ERA5.
+#' @param years Numerical range, years to select. Default (NULL)
+#' @param n.cores Integer, number of cores to use in parallel processing
+#' @param buffer Integer, default to zero. Buffer to add when selecting a country or a bounding box
+#' @return Tibble with list column
+#' @examples
+#'fpath <- system.file("extdata/", package="chatR")
+#' exmp <- load_data(country = "Moldova", variable="hurs", n.cores=6,
+#'               path.to.rcps = fpath)
+
 
 
 projections <-
@@ -16,14 +44,11 @@ projections <-
            duration = "max") {
     # checking inputs requirement
     if (data[[4]] != "C4R.dataframe")
-      stop("The input data does not seem to be the output of the loading function")
+      stop("The input data does not seem to be the output of the chatR loading function")
     stopifnot(is.logical(consecutive),
               is.logical(bias.correction),
               is.logical(trends))
-    if (!is.null(season) &
-        !is.null(season_month)) {
-      stop("specify season or season_month, not both")
-    }
+
     if (!is.null(lowert) &
         !is.null(uppert))
       stop("select only one threshold")
@@ -32,20 +57,20 @@ projections <-
         is.null(lowert))
       stop("Specify a threshold for which you want to calculate consecutive days")
     stopifnot(duration == "max" | duration == "total")
-    
+
     if (!any(str_detect(colnames(data[[1]]),"obs"))) {
       warning("Bias correction cannot be performed, set as F")
       bias.correction=F
     }
-    
+
     # retrieving information
     mod.numb <- dim(data[[1]]$models_mbrs[[1]]$Data) [1]
     datasets <- data[[1]]
     country_shp <- data[[2]]
     var <- datasets$models_mbrs[[1]]$Variable$varName
-    
+
     # messages
-    
+
     if (!trends & is.null(uppert) & is.null(lowert)) {
       mes = paste0(
         "Calculation of ",
@@ -54,7 +79,7 @@ projections <-
         var
       )
     }
-    
+
     if (!trends &
         (!is.null(uppert) | !is.null(lowert)) & !consecutive) {
       mes = paste0(
@@ -68,7 +93,7 @@ projections <-
         ifelse(bias.correction, " after bias-correction", "")
       )
     }
-    
+
     if (trends & is.null(uppert) & is.null(lowert)) {
       mes = paste0(
         "Calculation of yearly increase in ",
@@ -144,19 +169,19 @@ projections <-
         ifelse(bias.correction, " after bias-correction", "")
       )
     }
-    
+
     # initialising
-    
+
     datasets <- datasets %>%
       mutate_at(c("models_mbrs", "obs"), ~ map(., ~ subsetGrid(., season =
                                                                  season)))
-    
+
     message(Sys.time(),
             " projections, season ",
             glue_collapse(season, "-"),
             ". ",
             mes)
-    
+
     data_list <- datasets %>%
       filter(RCP != "historical") %>%
       {
@@ -264,35 +289,35 @@ projections <-
         }))
       ) %>%
       mutate(rs_tot = map(rs_tot, stack))
-    
+
     rs_tot <- stack(data_list$rs_tot)
     names(rs_tot) <-
       c(paste0("RCP2.6_", names(rs_tot)[1:ifelse(trends, 6, 3)]), paste0("RCP8.5_", names(rs_tot)[ifelse(trends, 7, 4):ifelse(trends, 12, 6)]))
-    
+
     rs_tot <- rs_tot %>%
       crop(., country_shp, snap = "out") %>%
       mask(., country_shp) %>%
       stack()
-    
+
     if (trends)  {
       rs_tot_p <-  subset(rs_tot, grep("pval", names(rs_tot)))
       rs_tot <- subset(rs_tot, grep("b", names(rs_tot)))
-      
-      
+
+
     }
-    
+
     # for legends
     colors <-
       rev(c("blue", "cyan", "green", "yellow", "orange", "red", "black"))
-    
+
     colors_pr <-
       c("red", "orange", "yellow", "green", "cyan", "blue", "purple")
-    
+
     legend_range = if (is.null(legend.range))
       c(range(raster::values(rs_tot), na.rm = TRUE))
     else
       legend.range
-    
+
     options(warn = -1)
     col <-
       if (var == "pr") {
@@ -307,21 +332,21 @@ projections <-
       else
         colors
     }
-    
+
     countries <-
       ne_countries(scale = "medium", returnclass = "sf")
-    
+
     provinces <-
       if (!is.null(prov.country))
         ne_states(country = prov.country, returnclass = "sf")
     else
       ne_countries(scale = "medium", returnclass = "sf")
-    
+
     colors <- if (!is.null(palette))
       palette
     else
       col
-    
+
     plot_titles <- if (is.null(lowert) & is.null(uppert)) {
       if (var == "pr" & isFALSE(trends))
         "mm"
@@ -337,7 +362,7 @@ projections <-
       else
         "N° days"
     }
-    
+
     rs_df <- as.data.frame(rs_tot, xy = TRUE, na.rm = TRUE) %>%
       pivot_longer(
         cols = 3:ncol(.),
@@ -349,7 +374,7 @@ projections <-
         time_frame = str_extract(long_name, "2\\d+_\\d+")
       ) %>%
       mutate(time_frame = str_replace(time_frame, "_", "-"))
-    
+
     if (trends) {
       rs_df.p <- as.data.frame(rs_tot_p, xy = TRUE, na.rm = TRUE) %>%
         pivot_longer(
@@ -367,7 +392,7 @@ projections <-
                            y = double(),
                            value = double())
     }
-    
+
     p <- ggplot() +
       scale_fill_gradientn(
         colors = colors,
@@ -423,16 +448,16 @@ projections <-
         ticks.colour = "black",
         ticks.linewidth = 2
       ))
-    
+
     ggsave(
       p,
       filename = paste0("../plot/", paste(plot_name, glue_collapse(season, "-")), ".png"),
       width = 5,
       height = 4
     )
-    
+
     p
-    
+
   } # end of function
 
 
