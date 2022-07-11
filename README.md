@@ -9,18 +9,18 @@ chatR is the package version of CHAT. It allows easy loading of cllimate models 
 library(devtools)
 install_github("Risk-Team/chatR")
 ```
-### Loading the example data
+### Loading example data
 
 ``` 
-library(devtools)
-install_github("Risk-Team/chatR")
+fpath <- system.file("extdata/", package="chatR")
+exmp <- load_data(country = "Moldova", variable="hurs", n.cores=6,
+              path.to.rcps = fpath)
 
 ```
 
 ### Visualizing climate projections
 
 ``` 
-library(devtools)
-install_github("Risk-Team/chatR")
+
 
 ```
