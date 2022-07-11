@@ -18,4 +18,6 @@ Imports:
     raster, 
     sp, 
     stringr,
-    transformeR
+    transformeR,
+    loadeR.java,
+    climate4R.UDG
