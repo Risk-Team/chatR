@@ -1,7 +1,7 @@
 Package: chatR
 Type: Package
 Title: Easy loading and visualization of climate models
-Version: 0.1.0
+Version: 1.0.0
 Author: Riccardo Soldan
 Maintainer: Riccardo Soldan <riccardosoldan@hotmail.it>
 Description: More about what it does (maybe more than one line)
