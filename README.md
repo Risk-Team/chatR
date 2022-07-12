@@ -15,6 +15,7 @@ if you encounter problems with dependencies, such as loadeR, downscaleR and clim
 [downscaleR](https://github.com/SantanderMetGroup/downscaleR),
 [climate4R.indices](https://github.com/SantanderMetGroup/climate4R.indices)
 
+A docker version will follow
 ### Loading example data
 
 ``` 
