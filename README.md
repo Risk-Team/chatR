@@ -11,8 +11,8 @@ install_github("Risk-Team/chatR")
 ```
 
 if you encounter problems with dependencies, such as loadeR, downscaleR and climate4R.indices, follow the following instructions:
-[loadeR](https://github.com/SantanderMetGroup/loadeR)
-[downscaleR](https://github.com/SantanderMetGroup/downscaleR)
+[loadeR](https://github.com/SantanderMetGroup/loadeR),
+[downscaleR](https://github.com/SantanderMetGroup/downscaleR),
 [climate4R.indices](https://github.com/SantanderMetGroup/climate4R.indices)
 
 ### Loading example data
