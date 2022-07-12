@@ -9,6 +9,12 @@ chatR can be seen as a wrapper of several packages, but the main engine for load
 library(devtools)
 install_github("Risk-Team/chatR")
 ```
+
+if there are problems with dependencies, such as loadeR, downscaleR and climate4R.indices,follow the intructions below:
+[loadeR] (https://github.com/SantanderMetGroup/loadeR)
+[downscaleR] (https://github.com/SantanderMetGroup/downscaleR)
+[climate4R.indices] (https://github.com/SantanderMetGroup/climate4R.indices)
+
 ### Loading example data
 
 ``` 
