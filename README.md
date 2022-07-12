@@ -1,6 +1,6 @@
 # chatR
 chatR is the package version of CHAT. It allows easy loading of cllimate models and the output of the load_data function is used as input for the remaining functions of the chatR package. 
-chatR can be seen as a wrapper of several packages, but the main engine for loading and processing climate models is the 
+chatR can be seen as a wrapper of several packages, but the main engine for loading and processing climate models is the  [climate4R framework](https://github.com/SantanderMetGroup/climate4R)
 ## Working examples
 
 ### Installation
