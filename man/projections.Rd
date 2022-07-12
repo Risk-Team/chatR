@@ -54,7 +54,7 @@ Automatically plot climate models projections and useful statistics.
 fpath <- system.file("extdata/", package="chatR")
 exmp <- load_data(country = "Moldova", variable="hurs", n.cores=6,
               path.to.rcps = fpath)
- projections(exmp, season = 1:12)
+projections(exmp, season = 1:12)
 
 
 }

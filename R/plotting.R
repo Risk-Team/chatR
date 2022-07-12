@@ -30,10 +30,10 @@
 #' @param duration character, either "max" or "total".
 #' @return ggplot object
 #' @examples
-#'fpath <- system.file("extdata/", package="chatR")
+#' fpath <- system.file("extdata/", package="chatR")
 #' exmp <- load_data(country = "Moldova", variable="hurs", n.cores=6,
 #'               path.to.rcps = fpath)
-#'  projections(exmp, season = 1:12)
+#' projections(exmp, season = 1:12)
 #'
 #'
 
