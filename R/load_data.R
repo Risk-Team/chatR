@@ -6,8 +6,6 @@
 #' @import purrr
 #' @import furrr
 #' @import dplyr
-#' @import loadeR
-#' @importFrom rJava is.jnull
 
 #'
 #' @param path.to.rcps Absolute path to the directory containing the RCPs/SSPs folders and historical simulations. For example,
@@ -176,10 +174,10 @@ df2 <- df1 %>%
     )))
 
   } else {.}} %>%
-  select(-models)
+  dplyr::select(-models)
 
 models <- df1 %>%
-  select(path)
+  dplyr::select(path)
 
 message(paste(Sys.time(), "Done"))
 rm(df1)

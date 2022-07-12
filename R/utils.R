@@ -102,7 +102,7 @@ make_raster <- function(cl4.object) {
   if (length(dim(cl4.object$Data)) != 2)
     stop("Your data needs to be a 2d array, check dimension")
 
-  rasters <- raster(
+  rasters <- raster::raster(
     cl4.object$Data,
     xmn = min(cl4.object$xyCoords$x),
     xmx = max(cl4.object$xyCoords$x),

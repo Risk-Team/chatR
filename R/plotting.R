@@ -1,6 +1,6 @@
 #' Climate projections visualization
 #'
-#' Automatically plot climate models projections and useful statistics
+#' Automatically plot climate models projections and useful statistics.
 #' @export
 #' @import stringr
 #' @import ggplot2
@@ -8,24 +8,34 @@
 #' @import furrr
 #' @import dplyr
 #' @import transformeR
-#
-#' @param path.to.rcps Absolute path to the directory containing the RCPs/SSPs folders and historical simulations. For example,
-#' home/user/data/. data would contain subfolders with the climate models. Historical simulations have to be contained in a folder called historical
-#' @param country A character string, in english, indicating the country of interest. To select a bounding box,
-#' set country to NULL and define arguments xlim and ylim
-#' @param variable  A character string indicating the variable to be loaded
-#' @param xlim Vector of length = 2, with minimum and maximum longitude coordinates, in decimal degrees, of the bounding box selected.
-#' @param ylim Same as xlim, but for the selection of the latitudinal range.
-#' @param path.to.obs Default to NULL, if not, indicate the absolute path to the directory containing a reanalysis dataset, for example W5E5 or ERA5.
-#' @param years Numerical range, years to select. Default (NULL)
-#' @param n.cores Integer, number of cores to use in parallel processing
-#' @param buffer Integer, default to zero. Buffer to add when selecting a country or a bounding box
-#' @return Tibble with list column
+#' @import rnaturalearthdata
+#' @import rnaturalearth
+#' @import RColorBrewer
+#' @importFrom downscaleR biasCorrection
+#' @importFrom glue glue_collapse
+#' @importFrom climate4R.indices linearTrend
+#' @importFrom raster crop mask stack extent subset flip
+
+#' @param data output of load_data
+#' @param bias.correction logical
+#' @param uppert  numeric of length=1, upper threshold
+#' @param lowert numeric of length=1, lower threshold
+#' @param legend.range numeric of length=2,
+#' @param trends logical, if TRUE applies linear regression
+#' @param season Numerical, seasons to select. For example, 1:12
+#' @param palette character vector indicating colors to be used
+#' @param method character, default to "scaling". Indicates the bias correction method
+#' @param prov.country character, country for which provinces are highlighted
+#' @param consecutive logical, to use in conjuunction with lowert or uppert
+#' @param duration character, either "max" or "total".
+#' @return ggplot object
 #' @examples
 #'fpath <- system.file("extdata/", package="chatR")
 #' exmp <- load_data(country = "Moldova", variable="hurs", n.cores=6,
 #'               path.to.rcps = fpath)
-
+#'  projections(exmp, season = 1:12)
+#'
+#'
 
 
 projections <-
@@ -34,8 +44,7 @@ projections <-
            uppert = NULL,
            lowert = NULL,
            legend.range = NULL,
-           trends,
-           plot_name,
+           trends=F,
            season,
            palette = NULL,
            method = "scaling",
@@ -169,13 +178,22 @@ projections <-
         ifelse(bias.correction, " after bias-correction", "")
       )
     }
+# cores
+future::plan(future::multisession, workers = 2)
 
-    # initialising
+# initialising
 
-    datasets <- datasets %>%
-      mutate_at(c("models_mbrs", "obs"), ~ map(., ~ subsetGrid(., season =
-                                                                 season)))
+if (any(str_detect(colnames(datasets), "obs"))) {
 
+  datasets <- datasets %>%
+    mutate_at(c("models_mbrs", "obs"), ~ map(., ~ subsetGrid(., season =
+                                                               season)))
+} else {
+
+  datasets <- datasets %>%
+    mutate_at(c("models_mbrs"), ~ map(., ~ subsetGrid(., season =
+                                                               season)))
+}
     message(Sys.time(),
             " projections, season ",
             glue_collapse(season, "-"),
@@ -196,10 +214,10 @@ projections <-
             )
           )
           mutate(.,
-                 models_mbrs = mclapply(models_mbrs, function(x) {
+                 models_mbrs = future_map(models_mbrs, function(x) {
                    if (var == "pr") {
                      bc <-
-                       biasCorrection(
+                       downscaleR::biasCorrection(
                          y = obs[[1]],
                          x = filter(datasets, RCP == "historical")$models_mbrs[[1]],
                          newdata = x,
@@ -209,7 +227,7 @@ projections <-
                        )
                    } else {
                      bc <-
-                       biasCorrection(
+                       downscaleR::biasCorrection(
                          y = obs[[1]],
                          x = filter(datasets, RCP == "historical")$models_mbrs[[1]],
                          newdata = x,
@@ -219,11 +237,11 @@ projections <-
                        )
                    }
                    out <-
-                     seasonersectGrid.time(x, bc, which.return = 2)
+                   transformeR::intersectGrid.time(x, bc, which.return = 2)
                    out$Dates$start <- x$Dates$start
                    out$Dates$end <-  x$Dates$end
                    return(out)
-                 }, mc.cores = 2))
+                 }))
         } else
           .
       }  %>%  # computing annual aggregation. if threshold is specified, first apply threshold
@@ -231,12 +249,12 @@ projections <-
         models_tmp = map(models_mbrs, function(x)  {
           # divide the data in 30 years time frame for projections
           yrs <- list(2010:2039, 2040:2069, 2070:2099)
-          map(yrs, ~ subsetGrid(x, years = .x))
+          map(yrs, ~ transformeR::subsetGrid(x, years = .x))
         }),
-        models_agg_y = mclapply(models_tmp, function(x)
+        models_agg_y = future_map(models_tmp, function(x)
           map(
             x,
-            ~ aggregateGrid(# perform aggregation based on seasonended output
+            ~ suppressMessages(transformeR::aggregateGrid(# perform aggregation based on seasonended output
               .x, aggr.y =
                 if (var == "pr" &
                     !consecutive &
@@ -248,7 +266,7 @@ projections <-
                   list(FUN = "mean")
                 } else if (consecutive) {
                   list(
-                    FUN = find_max_consec_dry,
+                    FUN = thrs_consec,
                     duration = duration,
                     lowert = lowert,
                     uppert = uppert
@@ -257,12 +275,12 @@ projections <-
                   list(FUN = thrs,
                        uppert = uppert,
                        lowert = lowert)
-                })
-          ), mc.cores = 2),
-        models_mean = mclapply(models_agg_y, function(x)
+                }))
+          )),
+        models_mean = future_map(models_agg_y, function(x)
           map(
-            x, ~ aggregateGrid(.x, aggr.mem = list(FUN = "mean", na.rm = TRUE))
-          ), mc.cores = 2),
+            x, ~ suppressMessages(transformeR::aggregateGrid(.x, aggr.mem = list(FUN = "mean", na.rm = TRUE)))
+          )),
         rs_tot = map(models_mean, ~ map(.x, function(y) {
           if (!trends) {
             # when trends is not specified
@@ -276,9 +294,9 @@ projections <-
             # for trends
             options(warn = -1)
             trendgrid <-
-              suppressMessages(linearTrend(y, p = 0.9) %>% subsetGrid(var = "b")  %>% make_raster)
+              suppressMessages(linearTrend(y, p = 0.9) %>% transformeR::subsetGrid(var = "b")  %>% make_raster)
             trendgrid_pvalues <-
-              suppressMessages(linearTrend(y, p = 0.9) %>% subsetGrid(var = "pval")  %>% make_raster)
+              suppressMessages(linearTrend(y, p = 0.9) %>% transformeR::subsetGrid(var = "pval")  %>% make_raster)
             names(trendgrid)  <-
               paste0(names(trendgrid), "_b")
             names(trendgrid_pvalues)  <-
@@ -288,9 +306,10 @@ projections <-
           }
         }))
       ) %>%
-      mutate(rs_tot = map(rs_tot, stack))
+      mutate(rs_tot = map(rs_tot, raster::stack))
 
     rs_tot <- stack(data_list$rs_tot)
+
     names(rs_tot) <-
       c(paste0("RCP2.6_", names(rs_tot)[1:ifelse(trends, 6, 3)]), paste0("RCP8.5_", names(rs_tot)[ifelse(trends, 7, 4):ifelse(trends, 12, 6)]))
 
@@ -363,8 +382,8 @@ projections <-
         "N° days"
     }
 
-    rs_df <- as.data.frame(rs_tot, xy = TRUE, na.rm = TRUE) %>%
-      pivot_longer(
+    rs_df <- raster::as.data.frame(rs_tot, xy = TRUE, na.rm = TRUE) %>%
+      tidyr::pivot_longer(
         cols = 3:ncol(.),
         values_to = "value",
         names_to = "long_name"
@@ -377,7 +396,7 @@ projections <-
 
     if (trends) {
       rs_df.p <- as.data.frame(rs_tot_p, xy = TRUE, na.rm = TRUE) %>%
-        pivot_longer(
+        tidyr::pivot_longer(
           cols = 3:ncol(.),
           values_to = "value",
           names_to = "long_name"
@@ -418,7 +437,7 @@ projections <-
         expand = F,
         ndiscr = 500
       ) +
-      geom_poseason(
+      geom_point(
         data = filter(rs_df.p, value < 0.05),
         size = 0.3,
         shape = 19,
@@ -449,14 +468,9 @@ projections <-
         ticks.linewidth = 2
       ))
 
-    ggsave(
-      p,
-      filename = paste0("../plot/", paste(plot_name, glue_collapse(season, "-")), ".png"),
-      width = 5,
-      height = 4
-    )
+    message(Sys.time(), " Done")
 
-    p
+    return(p)
 
   } # end of function
 
