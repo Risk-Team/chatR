@@ -117,7 +117,7 @@ message(paste(Sys.time(), "Data loading \n"))
 df1 <-
   tibble(
     path = files,
-    RCP =list.dirs(path.to.rcps)[-1]
+    RCP =list.dirs(path.to.rcps, full.names = F)[-1]
   ) %>%
   mutate(
     models = future_map(path,  ~ future_map(.x, function(x)  {
@@ -175,7 +175,7 @@ df2 <- df1 %>%
     )))
 
   } else {.}} %>%
-  dplyr::select(-models)
+  dplyr::select(-models, -path)
 
 models <- df1 %>%
   dplyr::select(path)
