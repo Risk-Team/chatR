@@ -7,6 +7,7 @@
 #' @import furrr
 #' @import dplyr
 
+
 #'
 #' @param path.to.rcps Absolute path to the directory containing the RCPs/SSPs folders and historical simulations. For example,
 #' home/user/data/. data would contain subfolders with the climate models. Historical simulations have to be contained in a folder called historical
@@ -59,7 +60,7 @@ if(str_detect(path.to.rcps, "^\\.")) stop("please use absolute paths")
   if(n.cores < length(list.files(path.to.rcps))) stop("Set n.cores > length(list.files(path.to.rcps))")
 
 # messages
-  if (length(list.files(path.to.rcps)) >= 2) message("Your directory contains the following folders: \n", paste(list.files(path.to.rcps), "\n"), "all files within the listed folders will be uploaded \n")
+  if (length(list.files(path.to.rcps)) >= 2) message("Your directory contains the following folders: \n", paste(list.dirs(path.to.rcps)[-1], "\n"), "all files within the listed folders will be uploaded \n")
 
  options(warn=-1)
 
@@ -91,7 +92,7 @@ if(range.x > 10 | range.y > 10) warning("Please make sure your bounding box is n
 
 # building the dataset
 
-files <- list.files(path.to.rcps, full.names = TRUE) %>%
+files <- list.dirs(path.to.rcps, full.names = TRUE)[-1] %>%
   map(., ~ list.files(.x, full.names = TRUE))
 
 future::plan(
@@ -116,7 +117,7 @@ message(paste(Sys.time(), "Data loading \n"))
 df1 <-
   tibble(
     path = files,
-    RCP =list.files(path.to.rcps)
+    RCP =list.dirs(path.to.rcps)[-1]
   ) %>%
   mutate(
     models = future_map(path,  ~ future_map(.x, function(x)  {
